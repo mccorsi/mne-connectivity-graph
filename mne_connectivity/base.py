@@ -21,6 +21,7 @@ from mne.utils import (
 from mne_connectivity.utils import _prepare_xarray_mne_data_structures, fill_doc
 from mne_connectivity.viz import plot_connectivity_circle
 
+import networkx as nx
 
 class SpectralMixin:
     """Mixin class for spectral connectivities.
@@ -916,6 +917,32 @@ class BaseConnectivity(EpochMixin):
 
         # re-set old attributes
         self.xarray.attrs = old_attrs
+
+    def to_networkx(self, isdirected=False, isthresholded=False):
+        connect_matrix = self.get_data(output="dense")
+        nodelist = self.names
+        # check whether the connectivity matrix is directed
+        if isdirected == False:
+            method = nx.Graph()
+        else:
+            method = nx.DiGraph()
+
+        if isthresholded == False:
+            edge_attributed = "weight"
+        else:
+            edge_attributed = False
+
+        # check the dimensions of connect_matrix
+        if "components" in self.dims:
+            comp_shape = len(self.coords["components"])
+        if "freqs" in self.dims:
+            freq_shape = len(self.coords["freqs"])
+        if "times" in self.dims:
+            time_shape=len(self.coords["times"])
+
+
+        G = nx.from_numpy_array(connect_matrix, create_using=method, edge_attr=edge_attributed, nodelist=nodelist)
+
 
 
 @fill_doc
