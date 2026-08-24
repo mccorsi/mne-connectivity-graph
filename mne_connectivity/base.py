@@ -919,21 +919,35 @@ class BaseConnectivity(EpochMixin):
         # re-set old attributes
         self.xarray.attrs = old_attrs
 
-    def to_networkx(self, isdirected=False, isthresholded=False):
-        nodelist = self.names
-        # check whether the connectivity matrix is directed
-        if isdirected == False:
-            method = nx.Graph()
-        else:
-            method = nx.DiGraph()
+    def to_networkx(self, is_directed=False, is_thresholded=False):
+        """ Export the connectivity data to networkx format. If multiple graphs exist (e.g., per time points or per
+        frequency bin), export a list of networkx graphs.
 
-        if isthresholded == False:
-            edge_attributed = "weight"
-        else:
-            edge_attributed = False
+        Parameters
+        ----------
+        is_directed : bool
+            Whether the connectivity matrix is directed or not. False exports date to networkx.Graph,
+            True export date to networkx.DiGraph. Default is False.
+        is_thresholded : bool
+            Whether the connectivity matrix is thresholded or not (binary edge weights). Default is False.
+
+        Returns
+        -------
+        list of networkx.Graph | networkx.
+            The exported connectivity data in networkx format. Dimensions are identical to dimensions of
+            the original Connectivity object.
+        """
+        nodelist = self.names
+
+        # check whether the connectivity matrix is directed
+        method = nx.Graph() if not is_directed else nx.DiGraph()
+        # check whether the connectivity matrix is thresholded
+        edge_attributed = "weight" if not is_thresholded else False
 
         # check the dimensions of connect_matrix
         new_shape = []
+        if self.is_epoched:
+            new_shape.append(self.n_epochs)
         if "components" in self.dims:
             new_shape.append(len(self.coords["components"]))
         if "freqs" in self.dims:
@@ -941,24 +955,30 @@ class BaseConnectivity(EpochMixin):
         if "times" in self.dims:
             new_shape.append(len(self.coords["times"]))
 
+        con_matrix = self.get_data(output="dense")  # shape: n_nodes * n_nodes, dims
 
-        temp_mega_matrix= self.get_data(output="dense") # n_nodes*n_nodes, dims
-        test = temp_mega_matrix.reshape([self.n_nodes, self.n_nodes, -1])
+        # epochs are the first dim: we put them after the two nodes dimension to ensure proper array reshaping below
+        if self.is_epoched:
+            con_matrix = con_matrix.transpose((1, 2, 0, *range(con_matrix.ndim)[3:]))
 
-        len2 = test.shape[2]
-        out = np.empty(len2, dtype=object)
-        for idx in range(len2):
-            connect_temp = temp_mega_matrix[:,:,idx]
-            out[idx]= nx.from_numpy_array(connect_temp, create_using=method, edge_attr=edge_attributed,
-                                               nodelist=nodelist)
-        list_graphs = np.reshape(out, new_shape)
+        con_matrix_flat = con_matrix.reshape([self.n_nodes, self.n_nodes, -1])
 
-        # check the validity of the reshape
-        shape_out = np.array(list_graphs.shape)
-        if new_shape != shape_out:
-            print('there is a problem in the set of dimensions used for the reshape')
-        else:
-            return list_graphs
+        n_extra_dims = con_matrix_flat.shape[2]
+        out = np.empty(n_extra_dims, dtype=object)
+        for idx in range(n_extra_dims):
+            out[idx] = nx.from_numpy_array(
+                con_matrix_flat[:, :, idx],
+                create_using=method,
+                edge_attr=edge_attributed,
+                nodelist=nodelist
+            )
+        graphs_array = np.reshape(out, new_shape)
+
+        if graphs_array.ndim == 0:
+            return [graphs_array.tolist()]
+
+        return graphs_array.tolist()
+
 
 @fill_doc
 class SpectralConnectivity(BaseConnectivity, SpectralMixin):
