@@ -941,20 +941,20 @@ class BaseConnectivity(EpochMixin):
         if "times" in self.dims:
             new_shape.append(len(self.coords["times"]))
 
-        out = []
+
         temp_mega_matrix= self.get_data(output="dense") # n_nodes*n_nodes, dims
         test = temp_mega_matrix.reshape([self.n_nodes, self.n_nodes, -1])
 
-        len2 = test.shape[1]
+        len2 = test.shape[2]
+        out = np.empty(len2, dtype=object)
         for idx in range(len2):
             connect_temp = temp_mega_matrix[:,:,idx]
-            out.append(nx.from_numpy_array(connect_temp, create_using=method, edge_attr=edge_attributed,
-                                               nodelist=nodelist))
-
-        list_graphs = out.reshape([self.n_nodes, self.n_nodes, *new_shape])
+            out[idx]= nx.from_numpy_array(connect_temp, create_using=method, edge_attr=edge_attributed,
+                                               nodelist=nodelist)
+        list_graphs = np.reshape(out, new_shape)
 
         # check the validity of the reshape
-        shape_out = list_graphs.shape()
+        shape_out = np.array(list_graphs.shape)
         if new_shape != shape_out:
             print('there is a problem in the set of dimensions used for the reshape')
         else:
