@@ -12,6 +12,7 @@ from mne.annotations import Annotations
 from mne.epochs import BaseEpochs
 from mne.io import RawArray
 from numpy.testing import assert_array_equal
+import networkx as nx
 
 from mne_connectivity import (
     Connectivity,
@@ -28,6 +29,18 @@ from mne_connectivity import (
 from mne_connectivity.effective import phase_slope_index
 from mne_connectivity.io import read_connectivity
 from mne_connectivity.spectral import spectral_connectivity_epochs
+
+# keeping track of which dimension of mock connectivity matrices
+NODE_AXES = dict(
+    Connectivity=0,
+    EpochConnectivity=1,
+    SpectralConnectivity=0,
+    TemporalConnectivity=0,
+    SpectroTemporalConnectivity=0,
+    EpochTemporalConnectivity=1,
+    EpochSpectralConnectivity=1,
+    EpochSpectroTemporalConnectivity=1
+)
 
 
 def _make_test_epochs():
@@ -56,7 +69,7 @@ def _make_test_epochs():
 
 
 def _prep_correct_connectivity_input(
-    conn_cls, n_nodes=3, symmetric=False, n_epochs=4, indices=None, n_components=0
+        conn_cls, n_nodes=3, symmetric=False, n_epochs=4, indices=None, n_components=0
 ):
     correct_numpy_shape = []
 
@@ -68,7 +81,7 @@ def _prep_correct_connectivity_input(
         if symmetric:
             correct_numpy_shape.append((n_nodes + 1) * n_nodes // 2)
         else:
-            correct_numpy_shape.append(n_nodes**2)
+            correct_numpy_shape.append(n_nodes ** 2)
     else:
         correct_numpy_shape.append(len(indices[0]))
 
@@ -77,18 +90,18 @@ def _prep_correct_connectivity_input(
         extra_kwargs["components"] = np.arange(n_components) + 1
 
     if conn_cls in (
-        SpectralConnectivity,
-        SpectroTemporalConnectivity,
-        EpochSpectralConnectivity,
-        EpochSpectroTemporalConnectivity,
+            SpectralConnectivity,
+            SpectroTemporalConnectivity,
+            EpochSpectralConnectivity,
+            EpochSpectroTemporalConnectivity,
     ):
         extra_kwargs["freqs"] = np.arange(4)
         correct_numpy_shape.append(4)
     if conn_cls in (
-        TemporalConnectivity,
-        SpectroTemporalConnectivity,
-        EpochTemporalConnectivity,
-        EpochSpectroTemporalConnectivity,
+            TemporalConnectivity,
+            SpectroTemporalConnectivity,
+            EpochTemporalConnectivity,
+            EpochSpectroTemporalConnectivity,
     ):
         extra_kwargs["times"] = np.arange(3)
         correct_numpy_shape.append(3)
@@ -137,7 +150,7 @@ def test_connectivity_containers(conn_cls, n_components):
 
     # test initialization error checks
     with pytest.raises(
-        TypeError, match="Connectivity data must be passed in as a numpy array"
+            TypeError, match="Connectivity data must be passed in as a numpy array"
     ):
         conn_cls(data=data, n_nodes=2, **extra_kwargs)
     with pytest.raises(RuntimeError, match="Data"):
@@ -156,14 +169,14 @@ def test_connectivity_containers(conn_cls, n_components):
     with pytest.raises(ValueError, match="Invalid value for the 'output' parameter"):
         conn.get_data(output="blah")
     with pytest.raises(
-        ValueError, match="cannot return multivariate connectivity data in a dense form"
+            ValueError, match="cannot return multivariate connectivity data in a dense form"
     ):
         multivar_conn = conn_cls(
             data=correct_numpy_input,
             n_nodes=n_nodes,
             indices=(
-                [[ind] for ind in range(n_nodes**2)],
-                [[ind] for ind in range(n_nodes**2)],
+                [[ind] for ind in range(n_nodes ** 2)],
+                [[ind] for ind in range(n_nodes ** 2)],
             ),
             **extra_kwargs,
         )
@@ -267,18 +280,18 @@ def test_io(conn_cls, tmpdir):
         correct_numpy_shape.append(4)
     correct_numpy_shape.append(4)
     if conn_cls in (
-        SpectralConnectivity,
-        SpectroTemporalConnectivity,
-        EpochSpectralConnectivity,
-        EpochSpectroTemporalConnectivity,
+            SpectralConnectivity,
+            SpectroTemporalConnectivity,
+            EpochSpectralConnectivity,
+            EpochSpectroTemporalConnectivity,
     ):
         extra_kwargs["freqs"] = np.arange(4)
         correct_numpy_shape.append(4)
     if conn_cls in (
-        TemporalConnectivity,
-        SpectroTemporalConnectivity,
-        EpochTemporalConnectivity,
-        EpochSpectroTemporalConnectivity,
+            TemporalConnectivity,
+            SpectroTemporalConnectivity,
+            EpochTemporalConnectivity,
+            EpochSpectroTemporalConnectivity,
     ):
         extra_kwargs["times"] = np.arange(3)
         correct_numpy_shape.append(3)
@@ -320,18 +333,18 @@ def test_append(conn_cls):
         correct_numpy_shape.append(4)
     correct_numpy_shape.append(4)
     if conn_cls in (
-        SpectralConnectivity,
-        SpectroTemporalConnectivity,
-        EpochSpectralConnectivity,
-        EpochSpectroTemporalConnectivity,
+            SpectralConnectivity,
+            SpectroTemporalConnectivity,
+            EpochSpectralConnectivity,
+            EpochSpectroTemporalConnectivity,
     ):
         extra_kwargs["freqs"] = np.arange(4)
         correct_numpy_shape.append(4)
     if conn_cls in (
-        TemporalConnectivity,
-        SpectroTemporalConnectivity,
-        EpochTemporalConnectivity,
-        EpochSpectroTemporalConnectivity,
+            TemporalConnectivity,
+            SpectroTemporalConnectivity,
+            EpochTemporalConnectivity,
+            EpochSpectroTemporalConnectivity,
     ):
         extra_kwargs["times"] = np.arange(50)
         correct_numpy_shape.append(50)
@@ -393,8 +406,8 @@ def test_metadata_handling(func, tmpdir, epochs):
     """
     kwargs = dict()
     if isinstance(epochs, np.ndarray) and func in (
-        spectral_connectivity_epochs,
-        phase_slope_index,
+            spectral_connectivity_epochs,
+            phase_slope_index,
     ):
         kwargs["sfreq"] = 5
 
@@ -445,3 +458,198 @@ def test_get_data_complex(indices):
     for output in ["raveled", "dense"]:
         out_data = conn.get_data(output=output)
         assert np.iscomplexobj(out_data)
+
+
+def check_nested_shape(obj, expected_shape, path=()):
+    """ helper function to check recursively test nested shape """
+    if len(expected_shape) == 0 or len(obj) == 0: return
+    assert len(obj) == expected_shape[0], f"shape mismatch at {path}: got {len(obj)}, expected {expected_shape[0]}"
+    check_nested_shape(obj[0], expected_shape[1:], path + (0,))
+
+
+def check_nested_obj_type(obj, idx):
+    """ helper function to check recursively test the type of a single list item """
+    if not isinstance(obj, list):
+        assert isinstance(obj, nx.Graph), f"Incorrect type: got {type(obj)}, expected networkx.Graph"
+    else:
+        check_nested_obj_type(obj[idx], idx=idx)
+
+
+def check_nested_weight_length(obj, idx, expected_n_weights):
+    """ helper function to check recursively test the number of weight values in a graph"""
+    if not isinstance(obj, list):
+        assert len(obj.edges.data()) == expected_n_weights, \
+            f"Incorrect number of weight values: got {len(obj.edges.data())}, expected {expected_n_weights}"
+    else:
+        check_nested_weight_length(obj[idx], idx=idx, expected_n_weights=expected_n_weights)
+
+
+@pytest.mark.parametrize(
+    "conn_cls",
+    [
+        Connectivity,
+        EpochConnectivity,
+        SpectralConnectivity,
+        TemporalConnectivity,
+        SpectroTemporalConnectivity,
+        EpochTemporalConnectivity,
+        EpochSpectralConnectivity,
+        EpochSpectroTemporalConnectivity,
+    ],
+)
+@pytest.mark.parametrize("n_components", [0, 2])
+def test_undirected_weighted_networkx_export(conn_cls, n_components):
+    """Test that networkx export works properly."""
+    n_epochs = 4
+    n_nodes = 3
+    correct_numpy_shape, extra_kwargs = _prep_correct_connectivity_input(
+        conn_cls,
+        n_nodes=n_nodes,
+        symmetric=False,
+        n_epochs=n_epochs,
+        n_components=n_components,
+    )
+    correct_numpy_input = np.ones(correct_numpy_shape)
+    conn = conn_cls(data=correct_numpy_input, n_nodes=3, **extra_kwargs)
+    G = conn.to_networkx(is_directed=False, is_weighted=True)
+
+    # expected dimension of the list of graphs
+    expected_shape = correct_numpy_shape.copy()
+    expected_shape.pop(NODE_AXES[conn_cls.__name__])
+    # if there is only a single graph, the to_networkx function still returns a list
+    if len(expected_shape) == 0:
+        expected_shape = [1]
+
+    check_nested_shape(G, expected_shape)
+
+    # ensuring the nested structure contains networkx.Graph objects at the first and last leaves
+    check_nested_obj_type(G, idx=0)
+    check_nested_obj_type(G, idx=-1)
+
+    # ensuring the graph weights are of the correct dimension
+    # undirect graph requires n_nodes! weight values
+    import math
+    expected_n_weights = math.factorial(n_nodes)
+
+    check_nested_weight_length(G, 0, expected_n_weights=expected_n_weights)
+    check_nested_weight_length(G, -1, expected_n_weights=expected_n_weights)
+
+
+@pytest.mark.parametrize(
+    "conn_cls",
+    [
+        Connectivity,
+        EpochConnectivity,
+        SpectralConnectivity,
+        TemporalConnectivity,
+        SpectroTemporalConnectivity,
+        EpochTemporalConnectivity,
+        EpochSpectralConnectivity,
+        EpochSpectroTemporalConnectivity,
+    ],
+)
+@pytest.mark.parametrize("n_components", [0, 2])
+def test_directed_weighted_networkx_export(conn_cls, n_components):
+    """Test that networkx export produces genuinely directed (asymmetric) weights."""
+    n_epochs = 4
+    n_nodes = 3
+    correct_numpy_shape, extra_kwargs = _prep_correct_connectivity_input(
+        conn_cls,
+        n_nodes=n_nodes,
+        symmetric=False,
+        n_epochs=n_epochs,
+        n_components=n_components,
+    )
+    node_axis = NODE_AXES[conn_cls.__name__]
+
+    # build an asymmetric weight matrix
+    directed_weights = np.arange(1, n_nodes ** 2 + 1)
+    broadcast_shape = [1] * len(correct_numpy_shape)
+    broadcast_shape[node_axis] = n_nodes ** 2
+    correct_numpy_input = np.broadcast_to(
+        directed_weights.reshape(broadcast_shape), correct_numpy_shape
+    )
+
+    conn = conn_cls(data=correct_numpy_input, n_nodes=n_nodes, **extra_kwargs)
+    G = conn.to_networkx(is_directed=True, is_weighted=True)
+
+    # expected dimension of the list of graphs
+    expected_shape = correct_numpy_shape.copy()
+    expected_shape.pop(node_axis)
+    # if there is only a single graph, the to_networkx function still returns a list
+    if len(expected_shape) == 0:
+        expected_shape = [1]
+
+    check_nested_shape(G, expected_shape)
+
+    # ensuring the nested structure contains networkx.Graph objects at the first and last leaves
+    check_nested_obj_type(G, idx=0)
+    check_nested_obj_type(G, idx=-1)
+
+    # ensuring the graph weights are of the correct dimension
+    # direct graph requires n_nodes**2 weight values
+    expected_n_weights = n_nodes ** 2
+
+    check_nested_weight_length(G, 0, expected_n_weights=expected_n_weights)
+    check_nested_weight_length(G, -1, expected_n_weights=expected_n_weights)
+
+@pytest.mark.parametrize(
+    "conn_cls",
+    [
+        Connectivity,
+        EpochConnectivity,
+        SpectralConnectivity,
+        TemporalConnectivity,
+        SpectroTemporalConnectivity,
+        EpochTemporalConnectivity,
+        EpochSpectralConnectivity,
+        EpochSpectroTemporalConnectivity,
+    ],
+)
+@pytest.mark.parametrize("n_components", [0, 2])
+def test_undirected_non_weighted_networkx_export(conn_cls, n_components):
+    """Test that networkx export works properly."""
+    n_epochs = 4
+    n_nodes = 3
+    correct_numpy_shape, extra_kwargs = _prep_correct_connectivity_input(
+        conn_cls,
+        n_nodes=n_nodes,
+        symmetric=False,
+        n_epochs=n_epochs,
+        n_components=n_components,
+    )
+    correct_numpy_input = np.ones(correct_numpy_shape)
+    conn = conn_cls(data=correct_numpy_input, n_nodes=3, **extra_kwargs)
+    G = conn.to_networkx(is_directed=False, is_weighted=False)
+
+    # expected dimension of the list of graphs
+    expected_shape = correct_numpy_shape.copy()
+    expected_shape.pop(NODE_AXES[conn_cls.__name__])
+    # if there is only a single graph, the to_networkx function still returns a list
+    if len(expected_shape) == 0:
+        expected_shape = [1]
+
+    check_nested_shape(G, expected_shape)
+
+    # ensuring the nested structure contains networkx.Graph objects at the first and last leaves
+    check_nested_obj_type(G, idx=0)
+    check_nested_obj_type(G, idx=-1)
+
+    # ensuring the graph weights are of the correct dimension
+    # undirect graph requires n_nodes! weight values
+    import math
+    expected_n_weights = math.factorial(n_nodes)
+
+    check_nested_weight_length(G, 0, expected_n_weights=expected_n_weights)
+    check_nested_weight_length(G, -1, expected_n_weights=expected_n_weights)
+
+    def check_nested_weight_values(obj, idx):
+        """ helper function to check recursively test the number of weight values in a graph"""
+        if not isinstance(obj, list):
+            # weight data are tuples of (i, j, weight_value), with i, j identifying the node
+            assert next(obj.edges.data("weight").__iter__())[-1] is None, "Incorrect weight value"
+        else:
+            check_nested_weight_values(obj[idx], idx=idx)
+
+    check_nested_weight_values(G, 0)
+    check_nested_weight_values(G, -1)
