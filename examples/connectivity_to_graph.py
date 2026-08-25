@@ -20,15 +20,12 @@ import os.path as op
 
 import matplotlib.pyplot as plt
 import mne
+import networkx as nx
+import numpy as np
 from mne.datasets import sample
 
 from examples.connectivity_classes import sfreq
 from mne_connectivity import spectral_connectivity_epochs
-
-import networkx as nx
-
-import numpy as np
-
 
 print(__doc__)
 
@@ -187,8 +184,8 @@ nx.draw_networkx_nodes(
     cmap=plt.cm.Set2,
 )
 nx.draw_networkx_labels(strong, pos, ax=ax, font_size=7)
-ax.set_title(f"Alpha-band (dPLI) network, top 20% of edges\n"
-             f"node size = strength, colour = Louvain community")
+ax.set_title("Alpha-band (dPLI) network, top 20% of edges\n"
+             "node size = strength, colour = Louvain community")
 ax.set_axis_off()
 fig.tight_layout()
 

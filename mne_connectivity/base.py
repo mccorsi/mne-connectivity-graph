@@ -1,6 +1,7 @@
 import re
 from copy import copy, deepcopy
 
+import networkx as nx
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -20,8 +21,6 @@ from mne.utils import (
 
 from mne_connectivity.utils import _prepare_xarray_mne_data_structures, fill_doc
 from mne_connectivity.viz import plot_connectivity_circle
-
-import networkx as nx
 
 
 class SpectralMixin:
@@ -920,7 +919,7 @@ class BaseConnectivity(EpochMixin):
         self.xarray.attrs = old_attrs
 
     def to_networkx(self, is_directed=False, is_weighted=True):
-        """ Export the connectivity data to networkx format. If multiple graphs exist (e.g., per time points or per
+        """Export the connectivity data to networkx format. If multiple graphs exist (e.g., per time points or per
         frequency bin), export a list of networkx graphs.
 
         Parameters
