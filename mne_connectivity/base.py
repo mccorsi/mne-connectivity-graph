@@ -919,7 +919,7 @@ class BaseConnectivity(EpochMixin):
         # re-set old attributes
         self.xarray.attrs = old_attrs
 
-    def to_networkx(self, is_directed=False, is_thresholded=False):
+    def to_networkx(self, is_directed=False, is_weighted=True):
         """ Export the connectivity data to networkx format. If multiple graphs exist (e.g., per time points or per
         frequency bin), export a list of networkx graphs.
 
@@ -928,8 +928,9 @@ class BaseConnectivity(EpochMixin):
         is_directed : bool
             Whether the connectivity matrix is directed or not. False exports date to networkx.Graph,
             True export date to networkx.DiGraph. Default is False.
-        is_thresholded : bool
-            Whether the connectivity matrix is thresholded or not (binary edge weights). Default is False.
+        is_weighted : bool
+            Whether the output graph should be weighted. False corresponds to thresholded connectivity
+            matrices. Default is True.
 
         Returns
         -------
@@ -942,7 +943,7 @@ class BaseConnectivity(EpochMixin):
         # check whether the connectivity matrix is directed
         method = nx.Graph() if not is_directed else nx.DiGraph()
         # check whether the connectivity matrix is thresholded
-        edge_attributed = "weight" if not is_thresholded else False
+        edge_attributed = "weight" if is_weighted else False
 
         # check the dimensions of connect_matrix
         new_shape = []
