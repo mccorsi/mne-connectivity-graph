@@ -944,10 +944,7 @@ class BaseConnectivity(EpochMixin):
         nodelist = self.names
 
         # check whether the connectivity matrix is directed
-        if is_directed is not None and not isinstance(is_directed, bool):
-            raise TypeError(
-                f"is_directed must be a bool or None, got {type(is_directed)}"
-            )
+        _validate_type(is_directed, (bool, None), "is_directed")
         # infer directionality of the graph from either the is_directed arg
         # or the indices attribute of the connectivity matrix
         # indices can be: 'all', tuple of array, None, or 'symmetric'
