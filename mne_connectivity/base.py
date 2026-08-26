@@ -919,23 +919,23 @@ class BaseConnectivity(EpochMixin):
         self.xarray.attrs = old_attrs
 
     def to_networkx(self, is_directed=False, is_weighted=True):
-        """Export the connectivity data to networkx format. If multiple graphs exist (e.g., per time points or per
-        frequency bin), export a list of networkx graphs.
+        """Export the connectivity data to networkx format. If multiple graphs exist
+        (e.g., per time points or per frequency bin), export a list of networkx graphs.
 
         Parameters
         ----------
-            is_directed : bool
-                Whether the connectivity matrix is directed or not. False exports date to networkx.Graph,
-                True export date to networkx.DiGraph. Default is False.
-            is_weighted : bool
-                Whether the output graph should be weighted. False corresponds to thresholded connectivity
-                matrices. Default is True.
+        is_directed : bool
+            Whether the connectivity matrix is directed or not. False exports date to
+            networkx.Graph, True export date to networkx.DiGraph. Default is False.
+        is_weighted : bool
+            Whether the output graph should be weighted. False corresponds to
+            thresholded connectivity matrices. Default is True.
 
         Returns
         -------
-            list of networkx.Graph | networkx.
-                The exported connectivity data in networkx format. Dimensions are identical to dimensions of
-                the original Connectivity object.
+        list of networkx.Graph | networkx.
+            The exported connectivity data in networkx format. Dimensions are identical
+            to dimensions of the original Connectivity object.
         """
         nodelist = self.names
 
@@ -957,7 +957,8 @@ class BaseConnectivity(EpochMixin):
 
         con_matrix = self.get_data(output="dense")  # shape: n_nodes * n_nodes, dims
 
-        # epochs are the first dim: we put them after the two nodes dimension to ensure proper array reshaping below
+        # epochs are the first dim: we put them after the two nodes dimension to ensure
+        # proper array reshaping below
         if self.is_epoched:
             con_matrix = con_matrix.transpose((1, 2, 0, *range(con_matrix.ndim)[3:]))
 

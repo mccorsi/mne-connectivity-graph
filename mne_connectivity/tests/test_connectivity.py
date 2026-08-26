@@ -481,10 +481,13 @@ def check_nested_obj_type(obj, idx):
 
 
 def check_nested_weight_length(obj, idx, expected_n_weights):
-    """Helper function to check recursively test the number of weight values in a graph"""
+    """Helper function to check recursively test the number of weight values in a
+    graph
+    """
     if not isinstance(obj, list):
         assert len(obj.edges.data()) == expected_n_weights, (
-            f"Incorrect number of weight values: got {len(obj.edges.data())}, expected {expected_n_weights}"
+            f"Incorrect number of weight values: got {len(obj.edges.data())}, "
+            f"expected {expected_n_weights}"
         )
     else:
         check_nested_weight_length(
@@ -530,7 +533,8 @@ def test_undirected_weighted_networkx_export(conn_cls, n_components):
 
     check_nested_shape(G, expected_shape)
 
-    # ensuring the nested structure contains networkx.Graph objects at the first and last leaves
+    # ensuring the nested structure contains networkx.Graph objects at the first and
+    # last leaves
     check_nested_obj_type(G, idx=0)
     check_nested_obj_type(G, idx=-1)
 
@@ -591,7 +595,8 @@ def test_directed_weighted_networkx_export(conn_cls, n_components):
 
     check_nested_shape(G, expected_shape)
 
-    # ensuring the nested structure contains networkx.Graph objects at the first and last leaves
+    # ensuring the nested structure contains networkx.Graph objects at the first and
+    # last leaves
     check_nested_obj_type(G, idx=0)
     check_nested_obj_type(G, idx=-1)
 
@@ -641,7 +646,8 @@ def test_undirected_non_weighted_networkx_export(conn_cls, n_components):
 
     check_nested_shape(G, expected_shape)
 
-    # ensuring the nested structure contains networkx.Graph objects at the first and last leaves
+    # ensuring the nested structure contains networkx.Graph objects at the first and
+    # last leaves
     check_nested_obj_type(G, idx=0)
     check_nested_obj_type(G, idx=-1)
 
@@ -655,9 +661,12 @@ def test_undirected_non_weighted_networkx_export(conn_cls, n_components):
     check_nested_weight_length(G, -1, expected_n_weights=expected_n_weights)
 
     def check_nested_weight_values(obj, idx):
-        """Helper function to check recursively test the number of weight values in a graph"""
+        """Helper function to check recursively test the number of weight values in a
+        graph
+        """
         if not isinstance(obj, list):
-            # weight data are tuples of (i, j, weight_value), with i, j identifying the node
+            # weight data are tuples of (i, j, weight_value),
+            # with i, j identifying the node
             assert next(obj.edges.data("weight").__iter__())[-1] is None, (
                 "Incorrect weight value"
             )
