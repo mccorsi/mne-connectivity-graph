@@ -968,7 +968,7 @@ class BaseConnectivity(EpochMixin):
             Whether the connectivity matrix is directed or not. ``False`` exports data
             as an undirected graph. ``True`` exports data as a directed graph. ``None``
             infers the graph type from the connectivity ``indices``:  ``None``,
-            ``'full'``, or a tuple returns a directed graph; ``'symmetric'`` returns an
+            ``'all'``, or a tuple returns a directed graph; ``'symmetric'`` returns an
             undirected graph. Default is ``None``.
         is_weighted : bool
             Whether the output graph should be weighted. False corresponds to
