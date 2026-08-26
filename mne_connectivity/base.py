@@ -929,10 +929,7 @@ class BaseConnectivity(EpochMixin):
         Parameters
         ----------
         is_directed : bool | None
-            Whether the connectivity matrix is directed or not. False exports data to
-            networkx.Graph, True export date to networkx.DiGraph. None infers the graph
-            type from the connectivity indices (None, 'full', or tuple of arrays yield a
-            directed graph; 'symmetric' yields an undirected graph). Default is None.
+            Whether the connectivity matrix is directed or not. ``False`` exports data as an undirected graph. ``True`` exports data as a directed graph. ``None`` infers the graph type from the connectivity ``indices``:  ``None``, ``'full'``, or a tuple returns a directed graph; ``'symmetric'`` returns an undirected graph). Default is ``None``.
         is_weighted : bool
             Whether the output graph should be weighted. False corresponds to
             thresholded connectivity matrices. Default is True.
