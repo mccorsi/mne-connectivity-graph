@@ -315,9 +315,9 @@ class DynamicMixin:
         for lag_idx in range(1, lags + 1):
             for epo_idx in range(n_epochs):
                 var_idx = epo_idx if self.is_epoched else 0
-                bp = var_model[var_idx, :, (lag_idx - 1):: lags]
+                bp = var_model[var_idx, :, (lag_idx - 1) :: lags]
                 predicted_data[epo_idx, :, lags:] += np.dot(
-                    bp, data[epo_idx, :, (lags - lag_idx): (n_times - lag_idx)]
+                    bp, data[epo_idx, :, (lags - lag_idx) : (n_times - lag_idx)]
                 )
         if data_ndim == 2:  # remove unwanted epochs dim
             predicted_data = predicted_data[0]
@@ -383,9 +383,9 @@ class DynamicMixin:
             res[jdx, :] = e
             data[jdx, :] = e
             for idx in range(1, lags + 1):
-                data[jdx, :] += var_model[:, (idx - 1):: lags].dot(data[jdx - idx, :])
+                data[jdx, :] += var_model[:, (idx - 1) :: lags].dot(data[jdx - idx, :])
 
-        return data[10 * lags:, :].transpose()
+        return data[10 * lags :, :].transpose()
 
 
 @fill_doc
@@ -440,16 +440,16 @@ class BaseConnectivity(EpochMixin):
     is_epoched = False
 
     def __init__(
-            self,
-            data,
-            names,
-            indices,
-            method,
-            n_nodes,
-            events=None,
-            event_id=None,
-            metadata=None,
-            **kwargs,
+        self,
+        data,
+        names,
+        indices,
+        method,
+        n_nodes,
+        events=None,
+        event_id=None,
+        metadata=None,
+        **kwargs,
     ):
         if isinstance(indices, str) and indices not in ["all", "symmetric"]:
             raise ValueError(
@@ -503,7 +503,7 @@ class BaseConnectivity(EpochMixin):
         self.n_estimated_nodes = data.shape[start_idx]
 
     def _prepare_xarray(
-            self, data, names, indices, n_nodes, method, events, event_id, **kwargs
+        self, data, names, indices, n_nodes, method, events, event_id, **kwargs
     ):
         """Prepare xarray data structure."""
         # generate events and event_id that originate from Epochs class
@@ -753,13 +753,13 @@ class BaseConnectivity(EpochMixin):
             data = self._data
         else:
             if (
-                    isinstance(self.indices, tuple)
-                    and not np.all(
-                [np.issubdtype(type(ind), int) for ind in self.indices[0]]
-            )
-                    and not np.all(
-                [np.issubdtype(type(ind), int) for ind in self.indices[1]]
-            )
+                isinstance(self.indices, tuple)
+                and not np.all(
+                    [np.issubdtype(type(ind), int) for ind in self.indices[0]]
+                )
+                and not np.all(
+                    [np.issubdtype(type(ind), int) for ind in self.indices[1]]
+                )
             ):  # i.e. check if multivariate results based on nested indices
                 # multivariate results cannot be returned in a dense form as a single
                 # set of results would correspond to multiple entries in the matrix, and
@@ -924,18 +924,18 @@ class BaseConnectivity(EpochMixin):
 
         Parameters
         ----------
-        is_directed : bool
-            Whether the connectivity matrix is directed or not. False exports date to networkx.Graph,
-            True export date to networkx.DiGraph. Default is False.
-        is_weighted : bool
-            Whether the output graph should be weighted. False corresponds to thresholded connectivity
-            matrices. Default is True.
+            is_directed : bool
+                Whether the connectivity matrix is directed or not. False exports date to networkx.Graph,
+                True export date to networkx.DiGraph. Default is False.
+            is_weighted : bool
+                Whether the output graph should be weighted. False corresponds to thresholded connectivity
+                matrices. Default is True.
 
         Returns
         -------
-        list of networkx.Graph | networkx.
-            The exported connectivity data in networkx format. Dimensions are identical to dimensions of
-            the original Connectivity object.
+            list of networkx.Graph | networkx.
+                The exported connectivity data in networkx format. Dimensions are identical to dimensions of
+                the original Connectivity object.
         """
         nodelist = self.names
 
@@ -970,7 +970,7 @@ class BaseConnectivity(EpochMixin):
                 con_matrix_flat[:, :, idx],
                 create_using=method,
                 edge_attr=edge_attributed,
-                nodelist=nodelist
+                nodelist=nodelist,
             )
         graphs_array = np.reshape(out, new_shape)
 
@@ -1012,16 +1012,16 @@ class SpectralConnectivity(BaseConnectivity, SpectralMixin):
     expected_n_dim = 2
 
     def __init__(
-            self,
-            data,
-            freqs,
-            n_nodes,
-            names=None,
-            indices="all",
-            method=None,
-            spec_method=None,
-            n_epochs_used=None,
-            **kwargs,
+        self,
+        data,
+        freqs,
+        n_nodes,
+        names=None,
+        indices="all",
+        method=None,
+        spec_method=None,
+        n_epochs_used=None,
+        **kwargs,
     ):
         super().__init__(
             data,
@@ -1070,15 +1070,15 @@ class TemporalConnectivity(BaseConnectivity, TimeMixin, DynamicMixin):
     expected_n_dim = 2
 
     def __init__(
-            self,
-            data,
-            times,
-            n_nodes,
-            names=None,
-            indices="all",
-            method=None,
-            n_epochs_used=None,
-            **kwargs,
+        self,
+        data,
+        times,
+        n_nodes,
+        names=None,
+        indices="all",
+        method=None,
+        n_epochs_used=None,
+        **kwargs,
     ):
         super().__init__(
             data,
@@ -1125,17 +1125,17 @@ class SpectroTemporalConnectivity(BaseConnectivity, SpectralMixin, TimeMixin):
     """
 
     def __init__(
-            self,
-            data,
-            freqs,
-            times,
-            n_nodes,
-            names=None,
-            indices="all",
-            method=None,
-            spec_method=None,
-            n_epochs_used=None,
-            **kwargs,
+        self,
+        data,
+        freqs,
+        times,
+        n_nodes,
+        names=None,
+        indices="all",
+        method=None,
+        spec_method=None,
+        n_epochs_used=None,
+        **kwargs,
     ):
         super().__init__(
             data,
@@ -1181,15 +1181,15 @@ class EpochSpectralConnectivity(SpectralConnectivity):
     is_epoched = True
 
     def __init__(
-            self,
-            data,
-            freqs,
-            n_nodes,
-            names=None,
-            indices="all",
-            method=None,
-            spec_method=None,
-            **kwargs,
+        self,
+        data,
+        freqs,
+        n_nodes,
+        names=None,
+        indices="all",
+        method=None,
+        spec_method=None,
+        **kwargs,
     ):
         super().__init__(
             data,
@@ -1233,7 +1233,7 @@ class EpochTemporalConnectivity(TemporalConnectivity):
     is_epoched = True
 
     def __init__(
-            self, data, times, n_nodes, names=None, indices="all", method=None, **kwargs
+        self, data, times, n_nodes, names=None, indices="all", method=None, **kwargs
     ):
         super().__init__(
             data,
@@ -1273,16 +1273,16 @@ class EpochSpectroTemporalConnectivity(SpectroTemporalConnectivity):
     is_epoched = True
 
     def __init__(
-            self,
-            data,
-            freqs,
-            times,
-            n_nodes,
-            names=None,
-            indices="all",
-            method=None,
-            spec_method=None,
-            **kwargs,
+        self,
+        data,
+        freqs,
+        times,
+        n_nodes,
+        names=None,
+        indices="all",
+        method=None,
+        spec_method=None,
+        **kwargs,
     ):
         super().__init__(
             data,
@@ -1322,14 +1322,14 @@ class Connectivity(BaseConnectivity, DynamicMixin):
     """
 
     def __init__(
-            self,
-            data,
-            n_nodes,
-            names=None,
-            indices="all",
-            method=None,
-            n_epochs_used=None,
-            **kwargs,
+        self,
+        data,
+        n_nodes,
+        names=None,
+        indices="all",
+        method=None,
+        n_epochs_used=None,
+        **kwargs,
     ):
         super().__init__(
             data,
@@ -1370,14 +1370,14 @@ class EpochConnectivity(Connectivity):
     is_epoched = True
 
     def __init__(
-            self,
-            data,
-            n_nodes,
-            names=None,
-            indices="all",
-            method=None,
-            n_epochs_used=None,
-            **kwargs,
+        self,
+        data,
+        n_nodes,
+        names=None,
+        indices="all",
+        method=None,
+        n_epochs_used=None,
+        **kwargs,
     ):
         super().__init__(
             data,
