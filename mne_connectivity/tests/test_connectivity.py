@@ -556,8 +556,9 @@ def test_undirected_weighted_networkx_export(conn_cls, n_components):
         n_components=n_components,
     )
     correct_numpy_input = np.ones(correct_numpy_shape)
-    conn = conn_cls(data=correct_numpy_input, n_nodes=n_nodes, indices="symmetric",
-                    **extra_kwargs)
+    conn = conn_cls(
+        data=correct_numpy_input, n_nodes=n_nodes, indices="symmetric", **extra_kwargs
+    )
     G = conn.to_networkx(is_directed=None, is_weighted=False)
     check_nested_obj_type(G, idx=0, expected_type=nx.Graph)
     check_nested_obj_type(G, idx=-1, expected_type=nx.Graph)
@@ -570,7 +571,6 @@ def test_undirected_weighted_networkx_export(conn_cls, n_components):
         expected_shape = [1]
 
     check_nested_shape(G, expected_shape)
-
 
 
 @pytest.mark.parametrize(
@@ -645,6 +645,9 @@ def test_directed_weighted_networkx_export(conn_cls, n_components):
         expected_shape = [1]
 
     check_nested_shape(G, expected_shape)
+
+    with pytest.warns(UserWarning, match="Non-symmetric connectivity data*"):
+        conn.to_networkx(is_directed=False)
 
 
 @pytest.mark.parametrize(

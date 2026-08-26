@@ -924,6 +924,8 @@ class BaseConnectivity(EpochMixin):
         If multiple graphs exist (e.g., per time points or per frequency bin),
         export a list of networkx graphs.
 
+        Multivariate connectivity data cannot be exported to networkx graphs.
+
         Parameters
         ----------
         is_directed : bool | None
@@ -945,6 +947,7 @@ class BaseConnectivity(EpochMixin):
 
         # check whether the connectivity matrix is directed
         _validate_type(is_directed, (bool, None), "is_directed")
+
         # infer directionality of the graph from either the is_directed arg
         # or the indices attribute of the connectivity matrix
         # indices can be: 'all', tuple of array, None, or 'symmetric'
@@ -971,7 +974,15 @@ class BaseConnectivity(EpochMixin):
         if "times" in self.dims:
             new_shape.append(len(self.coords["times"]))
 
-        con_matrix = self.get_data(output="dense")  # shape: n_nodes * n_nodes, dims
+        try:
+            con_matrix = self.get_data(output="dense")  # shape: n_nodes * n_nodes, dims
+        except ValueError as err:
+            print(err)
+            raise ValueError(
+                "Multivariate connectivity data cannot be exported to "
+                "networkx graphs, because their export in dense output "
+                "is currently not supported. See base.Connectivity.get_data."
+            )
 
         # epochs are the first dim: we put them after the two nodes dimension to ensure
         # proper array reshaping below
@@ -979,6 +990,15 @@ class BaseConnectivity(EpochMixin):
             con_matrix = con_matrix.transpose((1, 2, 0, *range(con_matrix.ndim)[3:]))
 
         con_matrix_flat = con_matrix.reshape([self.n_nodes, self.n_nodes, -1])
+
+        if not is_directed:
+            if np.any(con_matrix_flat != con_matrix_flat.transpose((1, 0, 2))):
+                warn(
+                    "Non-symmetric connectivity data is being passed to a "
+                    "`Graph` object. Consider passing `is_directed=True` to use a "
+                    "`DiGraph` object.",
+                    UserWarning,
+                )
 
         n_extra_dims = con_matrix_flat.shape[2]
         out = np.empty(n_extra_dims, dtype=object)
