@@ -470,14 +470,14 @@ def check_nested_shape(obj, expected_shape, path=()):
     check_nested_shape(obj[0], expected_shape[1:], path + (0,))
 
 
-def check_nested_obj_type(obj, idx):
+def check_nested_obj_type(obj, idx, expected_type):
     """Check recursively the type of a single list item."""
     if not isinstance(obj, list):
-        assert isinstance(obj, nx.Graph), (
+        assert isinstance(obj, expected_type), (
             f"Incorrect type: got {type(obj)}, expected networkx.Graph"
         )
     else:
-        check_nested_obj_type(obj[idx], idx=idx)
+        check_nested_obj_type(obj[idx], idx=idx, expected_type=expected_type)
 
 
 def check_nested_weight_length(obj, idx, expected_n_weights):
@@ -511,6 +511,8 @@ def test_undirected_weighted_networkx_export(conn_cls, n_components):
     """Test that networkx export works properly."""
     n_epochs = 4
     n_nodes = 3
+
+    # Non-symmetric matrices cast to non-directed graphs
     correct_numpy_shape, extra_kwargs = _prep_correct_connectivity_input(
         conn_cls,
         n_nodes=n_nodes,
@@ -519,7 +521,7 @@ def test_undirected_weighted_networkx_export(conn_cls, n_components):
         n_components=n_components,
     )
     correct_numpy_input = np.ones(correct_numpy_shape)
-    conn = conn_cls(data=correct_numpy_input, n_nodes=3, **extra_kwargs)
+    conn = conn_cls(data=correct_numpy_input, n_nodes=n_nodes, **extra_kwargs)
     G = conn.to_networkx(is_directed=False, is_weighted=True)
 
     # expected dimension of the list of graphs
@@ -533,8 +535,8 @@ def test_undirected_weighted_networkx_export(conn_cls, n_components):
 
     # ensuring the nested structure contains networkx.Graph objects at the first and
     # last leaves
-    check_nested_obj_type(G, idx=0)
-    check_nested_obj_type(G, idx=-1)
+    check_nested_obj_type(G, idx=0, expected_type=nx.Graph)
+    check_nested_obj_type(G, idx=-1, expected_type=nx.Graph)
 
     # ensuring the graph weights are of the correct dimension
     # undirect graph requires n_nodes! weight values
@@ -544,6 +546,31 @@ def test_undirected_weighted_networkx_export(conn_cls, n_components):
 
     check_nested_weight_length(G, 0, expected_n_weights=expected_n_weights)
     check_nested_weight_length(G, -1, expected_n_weights=expected_n_weights)
+
+    # Symmetric matrices exported to non-directed graphs
+    correct_numpy_shape, extra_kwargs = _prep_correct_connectivity_input(
+        conn_cls,
+        n_nodes=n_nodes,
+        symmetric=True,
+        n_epochs=n_epochs,
+        n_components=n_components,
+    )
+    correct_numpy_input = np.ones(correct_numpy_shape)
+    conn = conn_cls(data=correct_numpy_input, n_nodes=n_nodes, indices="symmetric",
+                    **extra_kwargs)
+    G = conn.to_networkx(is_directed=None, is_weighted=False)
+    check_nested_obj_type(G, idx=0, expected_type=nx.Graph)
+    check_nested_obj_type(G, idx=-1, expected_type=nx.Graph)
+
+    # expected dimension of the list of graphs
+    expected_shape = correct_numpy_shape.copy()
+    expected_shape.pop(NODE_AXES[conn_cls.__name__])
+    # if there is only a single graph, the to_networkx function still returns a list
+    if len(expected_shape) == 0:
+        expected_shape = [1]
+
+    check_nested_shape(G, expected_shape)
+
 
 
 @pytest.mark.parametrize(
@@ -595,8 +622,8 @@ def test_directed_weighted_networkx_export(conn_cls, n_components):
 
     # ensuring the nested structure contains networkx.Graph objects at the first and
     # last leaves
-    check_nested_obj_type(G, idx=0)
-    check_nested_obj_type(G, idx=-1)
+    check_nested_obj_type(G, idx=0, expected_type=nx.DiGraph)
+    check_nested_obj_type(G, idx=-1, expected_type=nx.DiGraph)
 
     # ensuring the graph weights are of the correct dimension
     # direct graph requires n_nodes**2 weight values
@@ -604,6 +631,20 @@ def test_directed_weighted_networkx_export(conn_cls, n_components):
 
     check_nested_weight_length(G, 0, expected_n_weights=expected_n_weights)
     check_nested_weight_length(G, -1, expected_n_weights=expected_n_weights)
+
+    G = conn.to_networkx(is_directed=None, is_weighted=True)
+
+    check_nested_obj_type(G, idx=0, expected_type=nx.DiGraph)
+    check_nested_obj_type(G, idx=-1, expected_type=nx.DiGraph)
+
+    # expected dimension of the list of graphs
+    expected_shape = correct_numpy_shape.copy()
+    expected_shape.pop(node_axis)
+    # if there is only a single graph, the to_networkx function still returns a list
+    if len(expected_shape) == 0:
+        expected_shape = [1]
+
+    check_nested_shape(G, expected_shape)
 
 
 @pytest.mark.parametrize(
@@ -635,6 +676,9 @@ def test_undirected_non_weighted_networkx_export(conn_cls, n_components):
     conn = conn_cls(data=correct_numpy_input, n_nodes=3, **extra_kwargs)
     G = conn.to_networkx(is_directed=False, is_weighted=False)
 
+    check_nested_obj_type(G, idx=0, expected_type=nx.Graph)
+    check_nested_obj_type(G, idx=-1, expected_type=nx.Graph)
+
     # expected dimension of the list of graphs
     expected_shape = correct_numpy_shape.copy()
     expected_shape.pop(NODE_AXES[conn_cls.__name__])
@@ -643,11 +687,6 @@ def test_undirected_non_weighted_networkx_export(conn_cls, n_components):
         expected_shape = [1]
 
     check_nested_shape(G, expected_shape)
-
-    # ensuring the nested structure contains networkx.Graph objects at the first and
-    # last leaves
-    check_nested_obj_type(G, idx=0)
-    check_nested_obj_type(G, idx=-1)
 
     # ensuring the graph weights are of the correct dimension
     # undirect graph requires n_nodes! weight values

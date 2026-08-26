@@ -918,7 +918,7 @@ class BaseConnectivity(EpochMixin):
         # re-set old attributes
         self.xarray.attrs = old_attrs
 
-    def to_networkx(self, is_directed=False, is_weighted=True):
+    def to_networkx(self, is_directed=None, is_weighted=True):
         """Export the connectivity data to networkx format.
 
         If multiple graphs exist (e.g., per time points or per frequency bin),
@@ -926,9 +926,11 @@ class BaseConnectivity(EpochMixin):
 
         Parameters
         ----------
-        is_directed : bool
-            Whether the connectivity matrix is directed or not. False exports date to
-            networkx.Graph, True export date to networkx.DiGraph. Default is False.
+        is_directed : bool | None
+            Whether the connectivity matrix is directed or not. False exports data to
+            networkx.Graph, True export date to networkx.DiGraph. None infers the graph
+            type from the connectivity indices (None, 'full', or tuple of arrays yield a
+            directed graph; 'symmetric' yields an undirected graph). Default is None.
         is_weighted : bool
             Whether the output graph should be weighted. False corresponds to
             thresholded connectivity matrices. Default is True.
@@ -942,9 +944,23 @@ class BaseConnectivity(EpochMixin):
         nodelist = self.names
 
         # check whether the connectivity matrix is directed
-        method = nx.Graph() if not is_directed else nx.DiGraph()
-        # check whether the connectivity matrix is thresholded
-        edge_attributed = "weight" if is_weighted else False
+        if is_directed is not None and not isinstance(is_directed, bool):
+            raise TypeError(
+                f"is_directed must be a bool or None, got {type(is_directed)}"
+            )
+        # infer directionality of the graph from either the is_directed arg
+        # or the indices attribute of the connectivity matrix
+        # indices can be: 'all', tuple of array, None, or 'symmetric'
+        method = nx.Graph()
+        if is_directed is None or is_directed:
+            if (
+                self.indices is None
+                or self.indices == "all"
+                or isinstance(self.indices, tuple)
+            ):
+                method = nx.DiGraph()
+
+        edge_attribute = "weight" if is_weighted else False
 
         # check the dimensions of connect_matrix
         new_shape = []
@@ -972,7 +988,7 @@ class BaseConnectivity(EpochMixin):
             out[idx] = nx.from_numpy_array(
                 con_matrix_flat[:, :, idx],
                 create_using=method,
-                edge_attr=edge_attributed,
+                edge_attr=edge_attribute,
                 nodelist=nodelist,
             )
         graphs_array = np.reshape(out, new_shape)
