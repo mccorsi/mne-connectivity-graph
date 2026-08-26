@@ -948,14 +948,15 @@ class BaseConnectivity(EpochMixin):
         # infer directionality of the graph from either the is_directed arg
         # or the indices attribute of the connectivity matrix
         # indices can be: 'all', tuple of array, None, or 'symmetric'
-        method = nx.Graph()
-        if is_directed is None or is_directed:
-            if (
-                self.indices is None
-                or self.indices == "all"
-                or isinstance(self.indices, tuple)
-            ):
-                method = nx.DiGraph()
+        if is_directed is None:
+            if self.indices == "symmetric":
+                is_directed = False
+            else:
+                is_directed = True
+        if is_directed:
+            method = nx.DiGraph()
+        else:
+            method = nx.Graph()
 
         edge_attribute = "weight" if is_weighted else False
 
