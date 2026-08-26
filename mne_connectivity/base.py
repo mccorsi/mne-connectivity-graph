@@ -924,12 +924,14 @@ class BaseConnectivity(EpochMixin):
         If multiple graphs exist (e.g., per time points or per frequency bin),
         export a list of networkx graphs.
 
-        Multivariate connectivity data cannot be exported to networkx graphs.
-
         Parameters
         ----------
         is_directed : bool | None
-            Whether the connectivity matrix is directed or not. ``False`` exports data as an undirected graph. ``True`` exports data as a directed graph. ``None`` infers the graph type from the connectivity ``indices``:  ``None``, ``'full'``, or a tuple returns a directed graph; ``'symmetric'`` returns an undirected graph). Default is ``None``.
+            Whether the connectivity matrix is directed or not. ``False`` is an
+            undirected graph, and ``True`` a directed graph. ``None`` infers the graph
+            type from the connectivity ``indices``:  ``None``, ``'full'``, or a tuple
+            is a directed graph; ``'symmetric'`` is an undirected graph).
+            Default is ``None``.
         is_weighted : bool
             Whether the output graph should be weighted. False corresponds to
             thresholded connectivity matrices. Default is True.
@@ -971,15 +973,7 @@ class BaseConnectivity(EpochMixin):
         if "times" in self.dims:
             new_shape.append(len(self.coords["times"]))
 
-        try:
-            con_matrix = self.get_data(output="dense")  # shape: n_nodes * n_nodes, dims
-        except ValueError as err:
-            print(err)
-            raise ValueError(
-                "Multivariate connectivity data cannot be exported to "
-                "networkx graphs, because their export in dense output "
-                "is currently not supported. See base.Connectivity.get_data."
-            )
+        con_matrix = self.get_data(output="dense")  # shape: n_nodes * n_nodes, dims
 
         # epochs are the first dim: we put them after the two nodes dimension to ensure
         # proper array reshaping below
@@ -989,7 +983,11 @@ class BaseConnectivity(EpochMixin):
         con_matrix_flat = con_matrix.reshape([self.n_nodes, self.n_nodes, -1])
 
         if not is_directed:
-            if np.any(con_matrix_flat != con_matrix_flat.transpose((1, 0, 2))):
+            tril_mat = np.tril(np.moveaxis(con_matrix, (0, 1), (-2, -1)))
+            triu_mat = np.triu(np.moveaxis(con_matrix, (0, 1), (-2, -1)))
+            if np.any(con_matrix_flat != con_matrix_flat.transpose((1, 0, 2))) or (
+                (triu_mat == 0).sum() == 0 or (tril_mat == 0).sum() == 0
+            ):
                 warn(
                     "Non-symmetric connectivity data is being passed to a "
                     "`Graph` object. Consider passing `is_directed=True` to use a "
