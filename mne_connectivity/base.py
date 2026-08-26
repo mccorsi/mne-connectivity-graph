@@ -939,7 +939,7 @@ class BaseConnectivity(EpochMixin):
 
         Returns
         -------
-        list of networkx.Graph | networkx.
+        list of networkx.Graph | networkx.DiGraph
             The exported connectivity data in networkx format. Dimensions are identical
             to dimensions of the original Connectivity object.
         """
