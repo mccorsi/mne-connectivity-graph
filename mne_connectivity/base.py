@@ -921,25 +921,27 @@ class BaseConnectivity(EpochMixin):
     def to_networkx(self, is_directed=None, is_weighted=True):
         """Export the connectivity data to networkx format.
 
-        If multiple graphs exist (e.g., per time points or per frequency bin),
-        export a list of networkx graphs.
-
         Multivariate connectivity data cannot be exported to networkx graphs.
 
         Parameters
         ----------
         is_directed : bool | None
-            Whether the connectivity matrix is directed or not. ``False`` exports data as an undirected graph. ``True`` exports data as a directed graph. ``None`` infers the graph type from the connectivity ``indices``:  ``None``, ``'full'``, or a tuple returns a directed graph; ``'symmetric'`` returns an undirected graph). Default is ``None``.
+            Whether the connectivity matrix is directed or not. ``False`` exports data
+            as an undirected graph. ``True`` exports data as a directed graph. ``None``
+            infers the graph type from the connectivity ``indices``:  ``None``,
+            ``'full'``, or a tuple returns a directed graph; ``'symmetric'`` returns an
+            undirected graph. Default is ``None``.
         is_weighted : bool
             Whether the output graph should be weighted. False corresponds to
             thresholded connectivity matrices. Default is True.
 
         Returns
         -------
-        list of networkx.Graph | networkx.DiGraph
-            The exported connectivity data in networkx format. Dimensions are identical
-            to dimensions of the original Connectivity object.
-        """
+        graphs : networkx.Graph or networkx.DiGraph | array of networkx.Graph or networkx.DiGraph
+            The connectivity data in networkx format. If additional dimensions (e.g.,
+            frequencies, times, etc...) are present, a graph is returned for each of
+            these entries in an array matching the shape of the data.
+        """  # noqa: E501
         nodelist = self.names
 
         # check whether the connectivity matrix is directed
@@ -947,16 +949,15 @@ class BaseConnectivity(EpochMixin):
 
         # infer directionality of the graph from either the is_directed arg
         # or the indices attribute of the connectivity matrix
-        # indices can be: 'all', tuple of array, None, or 'symmetric'
         if is_directed is None:
             if self.indices == "symmetric":
                 is_directed = False
             else:
                 is_directed = True
         if is_directed:
-            method = nx.DiGraph()
+            method = nx.DiGraph
         else:
-            method = nx.Graph()
+            method = nx.Graph
 
         edge_attribute = "weight" if is_weighted else False
 
@@ -998,20 +999,18 @@ class BaseConnectivity(EpochMixin):
                 )
 
         n_extra_dims = con_matrix_flat.shape[2]
-        out = np.empty(n_extra_dims, dtype=object)
+        graphs = np.empty(n_extra_dims, dtype=object)
         for idx in range(n_extra_dims):
-            out[idx] = nx.from_numpy_array(
+            graphs[idx] = nx.from_numpy_array(
                 con_matrix_flat[:, :, idx],
                 create_using=method,
                 edge_attr=edge_attribute,
                 nodelist=nodelist,
             )
-        graphs_array = np.reshape(out, new_shape)
 
-        if graphs_array.ndim == 0:
-            return [graphs_array.tolist()]
-
-        return graphs_array.tolist()
+        if new_shape == []:  # no extra dims
+            return graphs[0]
+        return np.reshape(graphs, new_shape)
 
 
 @fill_doc
