@@ -919,8 +919,10 @@ class BaseConnectivity(EpochMixin):
         self.xarray.attrs = old_attrs
 
     def to_networkx(self, is_directed=False, is_weighted=True):
-        """Export the connectivity data to networkx format. If multiple graphs exist
-        (e.g., per time points or per frequency bin), export a list of networkx graphs.
+        """Export the connectivity data to networkx format.
+
+        If multiple graphs exist (e.g., per time points or per frequency bin),
+        export a list of networkx graphs.
 
         Parameters
         ----------

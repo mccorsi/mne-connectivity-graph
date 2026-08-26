@@ -461,7 +461,7 @@ def test_get_data_complex(indices):
 
 
 def check_nested_shape(obj, expected_shape, path=()):
-    """Helper function to check recursively test nested shape"""
+    """Check recursively test nested shape."""
     if len(expected_shape) == 0 or len(obj) == 0:
         return
     assert len(obj) == expected_shape[0], (
@@ -471,7 +471,7 @@ def check_nested_shape(obj, expected_shape, path=()):
 
 
 def check_nested_obj_type(obj, idx):
-    """Helper function to check recursively test the type of a single list item"""
+    """Check recursively the type of a single list item."""
     if not isinstance(obj, list):
         assert isinstance(obj, nx.Graph), (
             f"Incorrect type: got {type(obj)}, expected networkx.Graph"
@@ -481,9 +481,7 @@ def check_nested_obj_type(obj, idx):
 
 
 def check_nested_weight_length(obj, idx, expected_n_weights):
-    """Helper function to check recursively test the number of weight values in a
-    graph
-    """
+    """Check recursively the number of weight values in a graph."""
     if not isinstance(obj, list):
         assert len(obj.edges.data()) == expected_n_weights, (
             f"Incorrect number of weight values: got {len(obj.edges.data())}, "
@@ -661,9 +659,7 @@ def test_undirected_non_weighted_networkx_export(conn_cls, n_components):
     check_nested_weight_length(G, -1, expected_n_weights=expected_n_weights)
 
     def check_nested_weight_values(obj, idx):
-        """Helper function to check recursively test the number of weight values in a
-        graph
-        """
+        """Check recursively the number of weight values in a graph."""
         if not isinstance(obj, list):
             # weight data are tuples of (i, j, weight_value),
             # with i, j identifying the node
