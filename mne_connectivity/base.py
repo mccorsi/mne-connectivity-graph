@@ -1016,10 +1016,28 @@ class BaseConnectivity(EpochMixin):
         con_matrix_flat = con_matrix.reshape([self.n_nodes, self.n_nodes, -1])
 
         if not directed:
+            # Check if a full, symmetric matrix
+            symmetric = np.array_equal(
+                con_matrix_flat, con_matrix_flat.transpose((1, 0, 2)), equal_nan=True
+            )
+
+            # Check if a triu matrix (tril is all NaN or 0)
+            tril_indices = np.tril_indices(self.n_nodes, k=-1)
+            triu = np.all(np.isnan(con_matrix_flat[tril_indices])) or np.all(
+                con_matrix_flat[tril_indices] == 0
+            )
+
+            # Check if a tril matrix (triu is all NaN or 0)
+            triu_indices = np.triu_indices(self.n_nodes, k=1)
+            tril = np.all(np.isnan(con_matrix_flat[triu_indices])) or np.all(
+                con_matrix_flat[triu_indices] == 0
+            )
+
+            if not symmetric or not triu or not tril:
                 warn(
-                    "Non-symmetric connectivity data is being passed to a "
-                    "`Graph` object. Consider passing `is_directed=True` to use a "
-                    "`DiGraph` object.",
+                    "Non-symmetric and non-triangular connectivity data is being "
+                    "passed to a non-directed `Graph` object. Consider passing"
+                    "`is_directed=True` to use a directed `DiGraph` object.",
                     UserWarning,
                 )
 
