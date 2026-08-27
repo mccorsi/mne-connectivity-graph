@@ -500,7 +500,7 @@ def test_get_data_complex(indices):
     ],
 )
 @pytest.mark.parametrize("n_components", [0, 2])
-@pytest.mark.parametrize("directed", [False])
+@pytest.mark.parametrize("directed", [True, False])
 def test_networkx_export(conn_cls, n_components, directed):
     """Test that networkx export works properly."""
     n_epochs = 4
@@ -599,3 +599,86 @@ def test_networkx_export(conn_cls, n_components, directed):
         flat_G = G.flatten()
         assert isinstance(flat_G[0], nx.DiGraph if directed else nx.Graph)
         assert_array_equal(len(flat_G[0].edges.data("weight")), expected_n_weights)
+
+
+@pytest.mark.parametrize(
+    "conn_cls",
+    [
+        Connectivity,
+        EpochConnectivity,
+        SpectralConnectivity,
+        TemporalConnectivity,
+        SpectroTemporalConnectivity,
+        EpochTemporalConnectivity,
+        EpochSpectralConnectivity,
+        EpochSpectroTemporalConnectivity,
+    ],
+)
+@pytest.mark.parametrize("n_components", [0, 2])
+@pytest.mark.parametrize(
+    "indices, directed",
+    [("symmetric", False), ("all", True), (None, True)],
+)
+def test_networkx_str_indices(conn_cls, n_components, indices, directed):
+    """Test that networkx makes the correct inference based on indices string.
+
+    In connectivity containers, the indices can be:
+    - tuple of arrays: tested in test_networkx_export
+    - 'symmetric'
+    - 'all'
+    - None
+    The logic in the to_networkx method only look at whether indices == 'symmetric'.
+    """
+    n_epochs = 4
+    n_nodes = 3
+    node_axis = NODE_AXES[conn_cls.__name__]
+
+    rng = np.random.default_rng(42)
+
+    input_shape, extra_kwargs = _prep_correct_connectivity_input(
+        conn_cls,
+        n_nodes=n_nodes,
+        symmetric=indices == "symmetric",
+        n_epochs=n_epochs,
+        n_components=n_components,
+    )
+    numpy_input = rng.random(input_shape)
+
+    conn = conn_cls(
+        data=numpy_input,
+        n_nodes=n_nodes,
+        indices=indices,
+        **extra_kwargs,
+    )
+    # directed was tested in test_networkx_export
+    G = conn.to_networkx(directed=directed)
+
+    # the previous test already ensured the correct class is returned
+    # the objective of this test is to ensure the correct weights are returned
+    if indices == "symmetric":
+        weights_to_check = np.triu_indices(n_nodes)
+    else:
+        weights_to_check = np.triu_indices(n_nodes, k=-n_nodes)
+    if not isinstance(G, np.ndarray):
+        assert_array_equal(nx.to_numpy_array(G)[weights_to_check], numpy_input)
+    else:
+        if conn.is_epoched:
+            numpy_input = numpy_input.transpose((1, 0, *range(numpy_input.ndim)[2:]))
+
+        numpy_input_flat = numpy_input.reshape([input_shape[node_axis], -1])
+        assert_array_equal(
+            np.array([nx.to_numpy_array(gg)[weights_to_check] for gg in G.flatten()]).T,
+            numpy_input_flat,
+        )
+
+    G = conn.to_networkx(directed=None)
+    if conn.indices == "symmetric":
+        if isinstance(G, np.ndarray):
+            assert all(isinstance(gg, nx.Graph) for gg in G.flatten())
+        else:
+            assert isinstance(G, nx.Graph)
+    else:
+        if isinstance(G, np.ndarray):
+            assert all(isinstance(gg, nx.DiGraph) for gg in G.flatten())
+        else:
+            assert isinstance(G, nx.DiGraph)
