@@ -1005,6 +1005,8 @@ class BaseConnectivity(EpochMixin):
             new_shape.append(len(self.coords["times"]))
 
         con_matrix = self.get_data(output="dense")  # shape: n_nodes * n_nodes, dims
+        if not new_shape:  # no extra dims
+            con_matrix = con_matrix[..., np.newaxis]  # add a temporary extra dim
 
         # epochs are the first dim: we put them after the two nodes dimension to ensure
         # proper array reshaping below
@@ -1031,7 +1033,7 @@ class BaseConnectivity(EpochMixin):
                 nodelist=nodelist,
             )
 
-        if new_shape == []:  # no extra dims
+        if not new_shape:  # no extra dims
             return graphs[0]
         return np.reshape(graphs, new_shape)
 
