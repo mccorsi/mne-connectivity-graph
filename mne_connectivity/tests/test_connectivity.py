@@ -547,7 +547,7 @@ def test_undirected_weighted_networkx_export(conn_cls, n_components):
     )
     correct_numpy_input = np.ones(correct_numpy_shape)
     conn = conn_cls(data=correct_numpy_input, n_nodes=n_nodes, **extra_kwargs)
-    G = conn.to_networkx(is_directed=False, is_weighted=True)
+    G = conn.to_networkx(directed=False)
 
     # expected dimension of the list of graphs
     expected_shape = correct_numpy_shape.copy()
@@ -582,7 +582,7 @@ def test_undirected_weighted_networkx_export(conn_cls, n_components):
     conn = conn_cls(
         data=correct_numpy_input, n_nodes=n_nodes, indices="symmetric", **extra_kwargs
     )
-    G = conn.to_networkx(is_directed=None, is_weighted=False)
+    G = conn.to_networkx(directed=None)
     expected_shape = correct_numpy_shape.copy()
     expected_shape.pop(NODE_AXES[conn_cls.__name__])
 
@@ -631,7 +631,7 @@ def test_directed_weighted_networkx_export(conn_cls, n_components):
     )
 
     conn = conn_cls(data=correct_numpy_input, n_nodes=n_nodes, **extra_kwargs)
-    G = conn.to_networkx(is_directed=True, is_weighted=True)
+    G = conn.to_networkx(directed=True)
 
     # expected dimension of the list of graphs
     expected_shape = correct_numpy_shape.copy()
@@ -652,7 +652,7 @@ def test_directed_weighted_networkx_export(conn_cls, n_components):
         check_nested_weight_length(G, 0, expected_n_weights=expected_n_weights)
         check_nested_weight_length(G, -1, expected_n_weights=expected_n_weights)
 
-    G = conn.to_networkx(is_directed=None, is_weighted=True)
+    G = conn.to_networkx(directed=None)
     if len(expected_shape) == 0:
         assert isinstance(G, nx.DiGraph)
         assert len(G.edges.data()) == expected_n_weights
@@ -662,7 +662,7 @@ def test_directed_weighted_networkx_export(conn_cls, n_components):
         check_nested_weight_length(G, 0, expected_n_weights=expected_n_weights)
 
     with pytest.warns(UserWarning, match="Non-symmetric connectivity data*"):
-        conn.to_networkx(is_directed=False)
+        conn.to_networkx(directed=False)
 
 
 @pytest.mark.parametrize(
@@ -692,7 +692,7 @@ def test_undirected_non_weighted_networkx_export(conn_cls, n_components):
     )
     correct_numpy_input = np.ones(correct_numpy_shape)
     conn = conn_cls(data=correct_numpy_input, n_nodes=3, **extra_kwargs)
-    G = conn.to_networkx(is_directed=False, is_weighted=False)
+    G = conn.to_networkx(directed=False)
 
     expected_shape = correct_numpy_shape.copy()
     expected_shape.pop(NODE_AXES[conn_cls.__name__])

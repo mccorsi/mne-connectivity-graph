@@ -957,22 +957,17 @@ class BaseConnectivity(EpochMixin):
         # re-set old attributes
         self.xarray.attrs = old_attrs
 
-    def to_networkx(self, is_directed=None, is_weighted=True):
+    def to_networkx(self, directed=None):
         """Export the connectivity data to networkx format.
-
-        Multivariate connectivity data cannot be exported to networkx graphs.
 
         Parameters
         ----------
-        is_directed : bool | None
+        directed : bool | None
             Whether the connectivity matrix is directed or not. ``False`` exports data
             as an undirected graph. ``True`` exports data as a directed graph. ``None``
             infers the graph type from the connectivity ``indices``:  ``None``,
             ``'all'``, or a tuple returns a directed graph; ``'symmetric'`` returns an
             undirected graph. Default is ``None``.
-        is_weighted : bool
-            Whether the output graph should be weighted. False corresponds to
-            thresholded connectivity matrices. Default is True.
 
         Returns
         -------
@@ -984,21 +979,19 @@ class BaseConnectivity(EpochMixin):
         nodelist = self.names
 
         # check whether the connectivity matrix is directed
-        _validate_type(is_directed, (bool, None), "is_directed")
+        _validate_type(directed, (bool, None), "directed")
 
         # infer directionality of the graph from either the is_directed arg
         # or the indices attribute of the connectivity matrix
-        if is_directed is None:
+        if directed is None:
             if self.indices == "symmetric":
                 is_directed = False
             else:
                 is_directed = True
         if is_directed:
-            method = nx.DiGraph
+            container = nx.DiGraph
         else:
-            method = nx.Graph
-
-        edge_attribute = "weight" if is_weighted else False
+            container = nx.Graph
 
         # check the dimensions of connect_matrix
         new_shape = []
@@ -1038,8 +1031,8 @@ class BaseConnectivity(EpochMixin):
         for idx in range(n_extra_dims):
             graphs[idx] = nx.from_numpy_array(
                 con_matrix_flat[:, :, idx],
-                create_using=method,
-                edge_attr=edge_attribute,
+                create_using=container,
+                edge_attr="weight",
                 nodelist=nodelist,
             )
 

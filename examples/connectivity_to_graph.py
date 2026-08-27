@@ -1,7 +1,7 @@
 """
-===============================================
+================================================
 Export a Connectivity object to a NetworkX graph
-===============================================
+================================================
 
 Converts a `mne_connectivity.Connectivity` object into a `networkx.Graph` so that the
 whole `NetworkX <https://networkx.org>`__ ecosystem (graph-theoretical metrics,
@@ -103,7 +103,7 @@ print(con)
 # (Granger causality, PDC, ...).
 # The node names are taken from `con.names` and the connectivity values are stored as
 # the "weight" edge attribute.
-list_graph = con.to_networkx(is_directed=False, is_weighted=True)
+list_graph = con.to_networkx(directed=False)
 graph = list_graph[0]
 print(f"Graph type       : {type(graph).__name__}")
 print(f"Number of nodes  : {graph.number_of_nodes()}")
