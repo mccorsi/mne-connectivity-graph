@@ -1033,7 +1033,7 @@ class BaseConnectivity(EpochMixin):
                 con_matrix_flat[triu_indices] == 0
             )
 
-            if not symmetric or not triu or not tril:
+            if not (symmetric or triu or tril):
                 warn(
                     "Non-symmetric and non-triangular connectivity data is being "
                     "passed to a non-directed `Graph` object. Consider passing"

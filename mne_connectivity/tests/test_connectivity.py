@@ -2,6 +2,7 @@
 #
 # License: BSD (3-clause)
 
+import math
 import os
 
 import networkx as nx
@@ -485,39 +486,6 @@ def test_get_data_complex(indices):
         assert np.iscomplexobj(out_data)
 
 
-def check_nested_shape(obj, expected_shape, path=()):
-    """Check recursively test nested shape."""
-    if len(expected_shape) == 0 or len(obj) == 0:
-        return
-    assert len(obj) == expected_shape[0], (
-        f"shape mismatch at {path}: got {len(obj)}, expected {expected_shape[0]}"
-    )
-    check_nested_shape(obj[0], expected_shape[1:], path + (0,))
-
-
-def check_nested_obj_type(obj, idx, expected_type):
-    """Check recursively the type of a single list item."""
-    if not isinstance(obj, np.ndarray):
-        assert isinstance(obj, expected_type), (
-            f"Incorrect type: got {type(obj)}, expected networkx.Graph"
-        )
-    else:
-        check_nested_obj_type(obj[idx], idx=idx, expected_type=expected_type)
-
-
-def check_nested_weight_length(obj, idx, expected_n_weights):
-    """Check recursively the number of weight values in a graph."""
-    if not isinstance(obj, np.ndarray):
-        assert len(obj.edges.data()) == expected_n_weights, (
-            f"Incorrect number of weight values: got {len(obj.edges.data())}, "
-            f"expected {expected_n_weights}"
-        )
-    else:
-        check_nested_weight_length(
-            obj[idx], idx=idx, expected_n_weights=expected_n_weights
-        )
-
-
 @pytest.mark.parametrize(
     "conn_cls",
     [
@@ -532,45 +500,17 @@ def check_nested_weight_length(obj, idx, expected_n_weights):
     ],
 )
 @pytest.mark.parametrize("n_components", [0, 2])
-def test_undirected_weighted_networkx_export(conn_cls, n_components):
+@pytest.mark.parametrize("directed", [False])
+def test_networkx_export(conn_cls, n_components, directed):
     """Test that networkx export works properly."""
     n_epochs = 4
     n_nodes = 3
+    expected_n_weights = n_nodes**2 if directed else math.factorial(n_nodes)
+    node_axis = NODE_AXES[conn_cls.__name__]
 
-    # Non-symmetric matrices cast to non-directed graphs
-    correct_numpy_shape, extra_kwargs = _prep_correct_connectivity_input(
-        conn_cls,
-        n_nodes=n_nodes,
-        symmetric=False,
-        n_epochs=n_epochs,
-        n_components=n_components,
-    )
-    correct_numpy_input = np.ones(correct_numpy_shape)
-    conn = conn_cls(data=correct_numpy_input, n_nodes=n_nodes, **extra_kwargs)
-    G = conn.to_networkx(directed=False)
+    rng = np.random.default_rng(42)
 
-    # expected dimension of the list of graphs
-    expected_shape = correct_numpy_shape.copy()
-    expected_shape.pop(NODE_AXES[conn_cls.__name__])
-
-    # ensuring the graph weights are of the correct dimension
-    # undirect graph requires n_nodes! weight values
-    import math
-
-    expected_n_weights = math.factorial(n_nodes)
-
-    # if there is only a single graph, the to_networkx function returns a Graph
-    if len(expected_shape) == 0:
-        assert isinstance(G, nx.Graph)
-        assert len(G.edges.data()) == expected_n_weights
-    else:
-        check_nested_shape(G, expected_shape)
-        check_nested_obj_type(G, idx=0, expected_type=nx.Graph)
-        check_nested_obj_type(G, idx=-1, expected_type=nx.Graph)
-        check_nested_weight_length(G, 0, expected_n_weights=expected_n_weights)
-        check_nested_weight_length(G, -1, expected_n_weights=expected_n_weights)
-
-    # Symmetric matrices exported to non-directed graphs
+    # 1. Preparing triangular matrix tests
     correct_numpy_shape, extra_kwargs = _prep_correct_connectivity_input(
         conn_cls,
         n_nodes=n_nodes,
@@ -578,152 +518,84 @@ def test_undirected_weighted_networkx_export(conn_cls, n_components):
         n_epochs=n_epochs,
         n_components=n_components,
     )
-    correct_numpy_input = np.ones(correct_numpy_shape)
-    conn = conn_cls(
-        data=correct_numpy_input, n_nodes=n_nodes, indices="symmetric", **extra_kwargs
-    )
-    G = conn.to_networkx(directed=None)
-    expected_shape = correct_numpy_shape.copy()
-    expected_shape.pop(NODE_AXES[conn_cls.__name__])
+    correct_numpy_input = rng.random(correct_numpy_shape)
 
-    if len(expected_shape) == 0:
-        assert isinstance(G, nx.Graph)
-        assert len(G.edges.data()) == expected_n_weights
-    else:
-        check_nested_shape(G, expected_shape)
-        check_nested_obj_type(G, idx=0, expected_type=nx.Graph)
-        check_nested_obj_type(G, idx=-1, expected_type=nx.Graph)
+    # Case 1: Lower-triangular, where upper-triangular are all zeros or NaNs
+    indices_l = np.tril_indices(n_nodes)
+    # Case 2: Upper-triangular, where lower-triangular are all zeros or NaNs
+    indices_u = np.triu_indices(n_nodes)
+    # Testing both cases: export to either directed or not directed graphs
+    for indices in [indices_l, indices_u]:
+        conn = conn_cls(
+            data=correct_numpy_input, n_nodes=n_nodes, indices=indices, **extra_kwargs
+        )
+        G = conn.to_networkx(directed=directed)
 
+        expected_shape = correct_numpy_shape.copy()
+        expected_shape.pop(node_axis)
 
-@pytest.mark.parametrize(
-    "conn_cls",
-    [
-        Connectivity,
-        EpochConnectivity,
-        SpectralConnectivity,
-        TemporalConnectivity,
-        SpectroTemporalConnectivity,
-        EpochTemporalConnectivity,
-        EpochSpectralConnectivity,
-        EpochSpectroTemporalConnectivity,
-    ],
-)
-@pytest.mark.parametrize("n_components", [0, 2])
-def test_directed_weighted_networkx_export(conn_cls, n_components):
-    """Test that networkx export produces genuinely directed (asymmetric) weights."""
-    n_epochs = 4
-    n_nodes = 3
+        if len(expected_shape) == 0:
+            assert isinstance(G, nx.DiGraph if directed else nx.Graph)
+        else:
+            assert_array_equal(G.shape, expected_shape)
+            flat_G = G.flatten()
+            assert isinstance(flat_G[0], nx.DiGraph if directed else nx.Graph)
+            assert_array_equal(len(flat_G[0].edges.data("weight")), expected_n_weights)
+
+    # 2. Preparing full matrix tests
     correct_numpy_shape, extra_kwargs = _prep_correct_connectivity_input(
         conn_cls,
         n_nodes=n_nodes,
-        symmetric=False,
+        symmetric=False,  # the symmetric case is handled manually below
         n_epochs=n_epochs,
         n_components=n_components,
     )
-    node_axis = NODE_AXES[conn_cls.__name__]
+    non_symmetric_input = rng.random(correct_numpy_shape)
+    # building a symmetric matrix by moving node axes to the back
+    x = np.moveaxis(non_symmetric_input, node_axis, -1)
+    x = x.reshape(*x.shape[:-1], n_nodes, n_nodes)
+    i, j = np.tril_indices(n_nodes, k=-1)  # excluding diagonal
+    x[..., i, j] = x[..., j, i]
+    x = x.reshape(*x.shape[:-2], n_nodes**2)
+    symmetric_input = np.moveaxis(x, -1, node_axis)
 
-    # build an asymmetric weight matrix
-    directed_weights = np.arange(1, n_nodes**2 + 1)
-    broadcast_shape = [1] * len(correct_numpy_shape)
-    broadcast_shape[node_axis] = n_nodes**2
-    correct_numpy_input = np.broadcast_to(
-        directed_weights.reshape(broadcast_shape), correct_numpy_shape
-    )
+    full_indices = np.triu_indices(n_nodes, k=-n_nodes)  # indices of the full matrix
 
-    conn = conn_cls(data=correct_numpy_input, n_nodes=n_nodes, **extra_kwargs)
-    G = conn.to_networkx(directed=True)
-
-    # expected dimension of the list of graphs
+    # the expected shape of the results graph array excludes the graph size
     expected_shape = correct_numpy_shape.copy()
     expected_shape.pop(node_axis)
 
-    # ensuring the graph weights are of the correct dimension
-    # direct graph requires n_nodes**2 weight values
-    expected_n_weights = n_nodes**2
-
-    # if there is only a single graph, the to_networkx function returns a DiGraph
-    if len(expected_shape) == 0:
-        assert isinstance(G, nx.DiGraph)
-        assert len(G.edges.data()) == expected_n_weights
-    else:
-        check_nested_shape(G, expected_shape)
-        check_nested_obj_type(G, idx=0, expected_type=nx.DiGraph)
-        check_nested_obj_type(G, idx=-1, expected_type=nx.DiGraph)
-        check_nested_weight_length(G, 0, expected_n_weights=expected_n_weights)
-        check_nested_weight_length(G, -1, expected_n_weights=expected_n_weights)
-
-    G = conn.to_networkx(directed=None)
-    if len(expected_shape) == 0:
-        assert isinstance(G, nx.DiGraph)
-        assert len(G.edges.data()) == expected_n_weights
-    else:
-        check_nested_shape(G, expected_shape)
-        check_nested_obj_type(G, idx=0, expected_type=nx.DiGraph)
-        check_nested_weight_length(G, 0, expected_n_weights=expected_n_weights)
-
-    with pytest.warns(UserWarning, match="Non-symmetric connectivity data*"):
-        conn.to_networkx(directed=False)
-
-
-@pytest.mark.parametrize(
-    "conn_cls",
-    [
-        Connectivity,
-        EpochConnectivity,
-        SpectralConnectivity,
-        TemporalConnectivity,
-        SpectroTemporalConnectivity,
-        EpochTemporalConnectivity,
-        EpochSpectralConnectivity,
-        EpochSpectroTemporalConnectivity,
-    ],
-)
-@pytest.mark.parametrize("n_components", [0, 2])
-def test_undirected_non_weighted_networkx_export(conn_cls, n_components):
-    """Test that networkx export works properly."""
-    n_epochs = 4
-    n_nodes = 3
-    correct_numpy_shape, extra_kwargs = _prep_correct_connectivity_input(
-        conn_cls,
-        n_nodes=n_nodes,
-        symmetric=False,
-        n_epochs=n_epochs,
-        n_components=n_components,
+    # Case 3: Full symmetric
+    conn = conn_cls(
+        data=symmetric_input, n_nodes=n_nodes, indices=full_indices, **extra_kwargs
     )
-    correct_numpy_input = np.ones(correct_numpy_shape)
-    conn = conn_cls(data=correct_numpy_input, n_nodes=3, **extra_kwargs)
-    G = conn.to_networkx(directed=False)
-
-    expected_shape = correct_numpy_shape.copy()
-    expected_shape.pop(NODE_AXES[conn_cls.__name__])
-
-    import math
-
-    expected_n_weights = math.factorial(n_nodes)
+    G = conn.to_networkx(directed=directed)
 
     if len(expected_shape) == 0:
-        assert isinstance(G, nx.Graph)
-        assert len(G.edges.data()) == expected_n_weights
-        # weight data are tuples of (i, j, weight_value),
-        # with i, j identifying the node
-        assert next(G.edges.data("weight").__iter__())[-1] is None
+        assert isinstance(G, nx.DiGraph if directed else nx.Graph)
     else:
-        check_nested_shape(G, expected_shape)
-        check_nested_obj_type(G, idx=0, expected_type=nx.Graph)
-        check_nested_obj_type(G, idx=-1, expected_type=nx.Graph)
-        check_nested_weight_length(G, 0, expected_n_weights=expected_n_weights)
-        check_nested_weight_length(G, -1, expected_n_weights=expected_n_weights)
+        assert_array_equal(G.shape, expected_shape)
+        flat_G = G.flatten()
+        assert isinstance(flat_G[0], nx.DiGraph if directed else nx.Graph)
+        assert_array_equal(len(flat_G[0].edges.data("weight")), expected_n_weights)
 
-        def check_nested_weight_values(obj, idx):
-            """Check recursively the number of weight values in a graph."""
-            if not isinstance(obj, np.ndarray):
-                # weight data are tuples of (i, j, weight_value),
-                # with i, j identifying the node
-                assert next(obj.edges.data("weight").__iter__())[-1] is None, (
-                    "Incorrect weight value"
-                )
-            else:
-                check_nested_weight_values(obj[idx], idx=idx)
+    # Case 4: Full non-symmetric
+    # It raises a warning only in the case of the casting of non-symmetric matrices
+    # to non-directed graphs
+    non_symmetric_input = rng.random(correct_numpy_shape)
+    conn = conn_cls(
+        data=non_symmetric_input, n_nodes=n_nodes, indices=full_indices, **extra_kwargs
+    )
+    if not directed:
+        with pytest.warns(UserWarning, match="Non-symmetric*"):
+            G = conn.to_networkx(directed=directed)
+    else:
+        G = conn.to_networkx(directed=directed)
 
-        check_nested_weight_values(G, 0)
-        check_nested_weight_values(G, -1)
+    if len(expected_shape) == 0:
+        assert isinstance(G, nx.DiGraph if directed else nx.Graph)
+    else:
+        assert_array_equal(G.shape, expected_shape)
+        flat_G = G.flatten()
+        assert isinstance(flat_G[0], nx.DiGraph if directed else nx.Graph)
+        assert_array_equal(len(flat_G[0].edges.data("weight")), expected_n_weights)
