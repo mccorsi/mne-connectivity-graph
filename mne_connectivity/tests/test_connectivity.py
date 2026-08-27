@@ -497,7 +497,7 @@ def check_nested_shape(obj, expected_shape, path=()):
 
 def check_nested_obj_type(obj, idx, expected_type):
     """Check recursively the type of a single list item."""
-    if not isinstance(obj, list):
+    if not isinstance(obj, np.ndarray):
         assert isinstance(obj, expected_type), (
             f"Incorrect type: got {type(obj)}, expected networkx.Graph"
         )
@@ -507,7 +507,7 @@ def check_nested_obj_type(obj, idx, expected_type):
 
 def check_nested_weight_length(obj, idx, expected_n_weights):
     """Check recursively the number of weight values in a graph."""
-    if not isinstance(obj, list):
+    if not isinstance(obj, np.ndarray):
         assert len(obj.edges.data()) == expected_n_weights, (
             f"Incorrect number of weight values: got {len(obj.edges.data())}, "
             f"expected {expected_n_weights}"
@@ -552,16 +552,6 @@ def test_undirected_weighted_networkx_export(conn_cls, n_components):
     # expected dimension of the list of graphs
     expected_shape = correct_numpy_shape.copy()
     expected_shape.pop(NODE_AXES[conn_cls.__name__])
-    # if there is only a single graph, the to_networkx function still returns a list
-    if len(expected_shape) == 0:
-        expected_shape = [1]
-
-    check_nested_shape(G, expected_shape)
-
-    # ensuring the nested structure contains networkx.Graph objects at the first and
-    # last leaves
-    check_nested_obj_type(G, idx=0, expected_type=nx.Graph)
-    check_nested_obj_type(G, idx=-1, expected_type=nx.Graph)
 
     # ensuring the graph weights are of the correct dimension
     # undirect graph requires n_nodes! weight values
@@ -569,8 +559,16 @@ def test_undirected_weighted_networkx_export(conn_cls, n_components):
 
     expected_n_weights = math.factorial(n_nodes)
 
-    check_nested_weight_length(G, 0, expected_n_weights=expected_n_weights)
-    check_nested_weight_length(G, -1, expected_n_weights=expected_n_weights)
+    # if there is only a single graph, the to_networkx function returns a Graph
+    if len(expected_shape) == 0:
+        assert isinstance(G, nx.Graph)
+        assert len(G.edges.data()) == expected_n_weights
+    else:
+        check_nested_shape(G, expected_shape)
+        check_nested_obj_type(G, idx=0, expected_type=nx.Graph)
+        check_nested_obj_type(G, idx=-1, expected_type=nx.Graph)
+        check_nested_weight_length(G, 0, expected_n_weights=expected_n_weights)
+        check_nested_weight_length(G, -1, expected_n_weights=expected_n_weights)
 
     # Symmetric matrices exported to non-directed graphs
     correct_numpy_shape, extra_kwargs = _prep_correct_connectivity_input(
@@ -585,17 +583,16 @@ def test_undirected_weighted_networkx_export(conn_cls, n_components):
         data=correct_numpy_input, n_nodes=n_nodes, indices="symmetric", **extra_kwargs
     )
     G = conn.to_networkx(is_directed=None, is_weighted=False)
-    check_nested_obj_type(G, idx=0, expected_type=nx.Graph)
-    check_nested_obj_type(G, idx=-1, expected_type=nx.Graph)
-
-    # expected dimension of the list of graphs
     expected_shape = correct_numpy_shape.copy()
     expected_shape.pop(NODE_AXES[conn_cls.__name__])
-    # if there is only a single graph, the to_networkx function still returns a list
-    if len(expected_shape) == 0:
-        expected_shape = [1]
 
-    check_nested_shape(G, expected_shape)
+    if len(expected_shape) == 0:
+        assert isinstance(G, nx.Graph)
+        assert len(G.edges.data()) == expected_n_weights
+    else:
+        check_nested_shape(G, expected_shape)
+        check_nested_obj_type(G, idx=0, expected_type=nx.Graph)
+        check_nested_obj_type(G, idx=-1, expected_type=nx.Graph)
 
 
 @pytest.mark.parametrize(
@@ -639,37 +636,30 @@ def test_directed_weighted_networkx_export(conn_cls, n_components):
     # expected dimension of the list of graphs
     expected_shape = correct_numpy_shape.copy()
     expected_shape.pop(node_axis)
-    # if there is only a single graph, the to_networkx function still returns a list
-    if len(expected_shape) == 0:
-        expected_shape = [1]
-
-    check_nested_shape(G, expected_shape)
-
-    # ensuring the nested structure contains networkx.Graph objects at the first and
-    # last leaves
-    check_nested_obj_type(G, idx=0, expected_type=nx.DiGraph)
-    check_nested_obj_type(G, idx=-1, expected_type=nx.DiGraph)
 
     # ensuring the graph weights are of the correct dimension
     # direct graph requires n_nodes**2 weight values
     expected_n_weights = n_nodes**2
 
-    check_nested_weight_length(G, 0, expected_n_weights=expected_n_weights)
-    check_nested_weight_length(G, -1, expected_n_weights=expected_n_weights)
+    # if there is only a single graph, the to_networkx function returns a DiGraph
+    if len(expected_shape) == 0:
+        assert isinstance(G, nx.DiGraph)
+        assert len(G.edges.data()) == expected_n_weights
+    else:
+        check_nested_shape(G, expected_shape)
+        check_nested_obj_type(G, idx=0, expected_type=nx.DiGraph)
+        check_nested_obj_type(G, idx=-1, expected_type=nx.DiGraph)
+        check_nested_weight_length(G, 0, expected_n_weights=expected_n_weights)
+        check_nested_weight_length(G, -1, expected_n_weights=expected_n_weights)
 
     G = conn.to_networkx(is_directed=None, is_weighted=True)
-
-    check_nested_obj_type(G, idx=0, expected_type=nx.DiGraph)
-    check_nested_obj_type(G, idx=-1, expected_type=nx.DiGraph)
-
-    # expected dimension of the list of graphs
-    expected_shape = correct_numpy_shape.copy()
-    expected_shape.pop(node_axis)
-    # if there is only a single graph, the to_networkx function still returns a list
     if len(expected_shape) == 0:
-        expected_shape = [1]
-
-    check_nested_shape(G, expected_shape)
+        assert isinstance(G, nx.DiGraph)
+        assert len(G.edges.data()) == expected_n_weights
+    else:
+        check_nested_shape(G, expected_shape)
+        check_nested_obj_type(G, idx=0, expected_type=nx.DiGraph)
+        check_nested_weight_length(G, 0, expected_n_weights=expected_n_weights)
 
     with pytest.warns(UserWarning, match="Non-symmetric connectivity data*"):
         conn.to_networkx(is_directed=False)
@@ -704,37 +694,36 @@ def test_undirected_non_weighted_networkx_export(conn_cls, n_components):
     conn = conn_cls(data=correct_numpy_input, n_nodes=3, **extra_kwargs)
     G = conn.to_networkx(is_directed=False, is_weighted=False)
 
-    check_nested_obj_type(G, idx=0, expected_type=nx.Graph)
-    check_nested_obj_type(G, idx=-1, expected_type=nx.Graph)
-
-    # expected dimension of the list of graphs
     expected_shape = correct_numpy_shape.copy()
     expected_shape.pop(NODE_AXES[conn_cls.__name__])
-    # if there is only a single graph, the to_networkx function still returns a list
-    if len(expected_shape) == 0:
-        expected_shape = [1]
 
-    check_nested_shape(G, expected_shape)
-
-    # ensuring the graph weights are of the correct dimension
-    # undirect graph requires n_nodes! weight values
     import math
 
     expected_n_weights = math.factorial(n_nodes)
 
-    check_nested_weight_length(G, 0, expected_n_weights=expected_n_weights)
-    check_nested_weight_length(G, -1, expected_n_weights=expected_n_weights)
+    if len(expected_shape) == 0:
+        assert isinstance(G, nx.Graph)
+        assert len(G.edges.data()) == expected_n_weights
+        # weight data are tuples of (i, j, weight_value),
+        # with i, j identifying the node
+        assert next(G.edges.data("weight").__iter__())[-1] is None
+    else:
+        check_nested_shape(G, expected_shape)
+        check_nested_obj_type(G, idx=0, expected_type=nx.Graph)
+        check_nested_obj_type(G, idx=-1, expected_type=nx.Graph)
+        check_nested_weight_length(G, 0, expected_n_weights=expected_n_weights)
+        check_nested_weight_length(G, -1, expected_n_weights=expected_n_weights)
 
-    def check_nested_weight_values(obj, idx):
-        """Check recursively the number of weight values in a graph."""
-        if not isinstance(obj, list):
-            # weight data are tuples of (i, j, weight_value),
-            # with i, j identifying the node
-            assert next(obj.edges.data("weight").__iter__())[-1] is None, (
-                "Incorrect weight value"
-            )
-        else:
-            check_nested_weight_values(obj[idx], idx=idx)
+        def check_nested_weight_values(obj, idx):
+            """Check recursively the number of weight values in a graph."""
+            if not isinstance(obj, np.ndarray):
+                # weight data are tuples of (i, j, weight_value),
+                # with i, j identifying the node
+                assert next(obj.edges.data("weight").__iter__())[-1] is None, (
+                    "Incorrect weight value"
+                )
+            else:
+                check_nested_weight_values(obj[idx], idx=idx)
 
-    check_nested_weight_values(G, 0)
-    check_nested_weight_values(G, -1)
+        check_nested_weight_values(G, 0)
+        check_nested_weight_values(G, -1)
