@@ -985,10 +985,10 @@ class BaseConnectivity(EpochMixin):
         # or the indices attribute of the connectivity matrix
         if directed is None:
             if self.indices == "symmetric":
-                is_directed = False
+                directed = False
             else:
-                is_directed = True
-        if is_directed:
+                directed = True
+        if directed:
             container = nx.DiGraph
         else:
             container = nx.Graph
@@ -1013,12 +1013,7 @@ class BaseConnectivity(EpochMixin):
 
         con_matrix_flat = con_matrix.reshape([self.n_nodes, self.n_nodes, -1])
 
-        if not is_directed:
-            tril_mat = np.tril(np.moveaxis(con_matrix, (0, 1), (-2, -1)))
-            triu_mat = np.triu(np.moveaxis(con_matrix, (0, 1), (-2, -1)))
-            if np.any(con_matrix_flat != con_matrix_flat.transpose((1, 0, 2))) or (
-                (triu_mat == 0).sum() == 0 or (tril_mat == 0).sum() == 0
-            ):
+        if not directed:
                 warn(
                     "Non-symmetric connectivity data is being passed to a "
                     "`Graph` object. Consider passing `is_directed=True` to use a "
