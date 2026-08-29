@@ -84,7 +84,8 @@ wpli = spectral_connectivity_epochs(
     epochs, method="wpli2_debiased", indices=tril_indices, **conn_kwargs
 )
 
-full_indices = np.indices(len(epochs.ch_names), len(epochs.ch_names))
+full_indices = np.indices((len(epochs.ch_names), len(epochs.ch_names)))
+full_indices = (full_indices[0].ravel(), full_indices[1].ravel())
 dpli = spectral_connectivity_epochs(
     epochs, method="dpli", indices=full_indices, **conn_kwargs
 )
@@ -114,7 +115,7 @@ wpli_graph = wpli.to_networkx(directed=False)[0]
 dpli_graph = dpli.to_networkx(directed=True)[0]
 
 for graph in (wpli_graph, dpli_graph):
-    print(f"Graph type      : {type(graph)}")
+    print(f"Graph type      : {type(graph).__name__}")
     print(f"Number of nodes : {graph.number_of_nodes()}")
     print(f"Number of edges : {graph.number_of_edges()}")
     print(f"Directed        : {graph.is_directed()}\n")
@@ -122,6 +123,13 @@ for graph in (wpli_graph, dpli_graph):
 ########################################################################################
 # In the exported graphs, the nodes are labelled with the channel names, and the edge
 # weights of the nodes carry the connectivity values.
+#
+# You may notice that for the wPLI graph, the first connection is a self-connection of
+# the first node, even though this was not a connection in the original set computed
+# using the lower-triangular indices. This is because when converting from the
+# underlying NumPy array to a NetworkX graph, a 2D ``[nodes, nodes]`` array is expected.
+# For any missing connections, we fill these values with ``numpy.nan``, as you can see
+# from the edge weight.
 
 # %%
 
